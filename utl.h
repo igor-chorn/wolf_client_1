@@ -31,6 +31,15 @@ static inline int req_valid(int idx) {
   return (idx >= 0 && (size_t)idx < http_req_arr_size) ? 1 : 0;
 };
 
+static inline const char* errno_str(int err) {
+  switch (err) {
+  case EINTR: return "EINTR";
+  case EAGAIN: return "EAGAIN";
+  case ECONNRESET: return "ECONNRESET";
+  default: return strerror(err);
+  }
+};
+
 const char *nformat(const void *data, int len);
 const char *bin2str(const void *data, size_t len);
 int bin2hex(const void *bin, size_t bin_len, char *hex, size_t hex_len);
@@ -56,10 +65,12 @@ void set_time_point(time_point_t* ppoint);
 void update_time_point(time_point_t* ppoint);
 const char* time_point_str(time_point_t* ppoint);
 
+#ifdef WOLFSSL_OPTIONS_H
 int connect_socket(const char *srv_ip, uint16_t srv_port);
 int send_ssl_data(int fd, WOLFSSL *ssl, const void *data, size_t data_size);
 int send_early_data(int fd, WOLFSSL *ssl, const void *data, size_t data_size);
 size_t receive_ssl_data(int fd, WOLFSSL *ssl, void *data, size_t max_data_size);
 void save_rx_file(void* data, size_t data_len, const char* fname);
+#endif
 
 #endif

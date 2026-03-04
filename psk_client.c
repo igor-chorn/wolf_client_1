@@ -244,11 +244,13 @@ unsigned int my_psk_client_cb(WOLFSSL* ssl, const char* hint,
         char* identity, unsigned int id_max_len, unsigned char* key,
         unsigned int key_max_len)
 {
+    static unsigned char cached_key[32];
     trace("entry hint:'%s' identity:'%s' id_max_len:%u key_max_len:%u", hint, identity, id_max_len, key_max_len);
     trace("identity: %02x %02x %02x %02x", identity[0], identity[1], identity[2], identity[3]);
 
     if (identity[0] != 0) {
-        trace("exit fast ret=32");
+        memcpy(key, cached_key, 32);
+        trace("exit fast cached key ret=32");
         return 32;
     }
 
@@ -327,6 +329,7 @@ unsigned int my_psk_client_cb(WOLFSSL* ssl, const char* hint,
     //------------------------------------
 
     memcpy(key, secret_hash, 32);
+    memcpy(cached_key, secret_hash, 32);
 
     wc_curve25519_free(&client_key);
     wc_curve25519_free(&server_key);
