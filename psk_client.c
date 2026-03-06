@@ -60,9 +60,9 @@ client_psk_t client_psk[PSK_COUNT] = {
 
 static WOLFSSL_CTX *psync_wolf_ctx = NULL;
 static int wait_sock_ready_for_ssl(int sock, int psync_ssl_errno);
-unsigned int my_psk_client_cb(WOLFSSL* ssl, const char* hint,
+unsigned int my_psk_client_tls13_cb(WOLFSSL* ssl, const char* hint,
         char* identity, unsigned int id_max_len, unsigned char* key,
-        unsigned int key_max_len);
+        unsigned int key_max_len, const char** ciphersuite);
 
 
 int main(int argc, char **argv) {
@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
     printf("rx_regfile        :%s\n", rx_regfile);
     printf("sni_name          :%s\n", sni_name);
     printf("psk_key_idx       :%u\n", psk_key_idx);
-    remove(keylog_file);
+    if (keylog_file) remove(keylog_file);
 
     if (!client_psk[psk_key_idx].present){
         printf("wrong psk index\n");
@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
     psync_wolf_ctx = wolfSSL_CTX_new(wolfTLSv1_3_client_method());
     wolfSSL_CTX_SetMinVersion(psync_wolf_ctx, WOLFSSL_TLSV1_3);
     wolfSSL_CTX_set_verify(psync_wolf_ctx, WOLFSSL_VERIFY_NONE, NULL);
-    wolfSSL_CTX_set_psk_client_callback(psync_wolf_ctx, my_psk_client_cb);
+    wolfSSL_CTX_set_psk_client_tls13_callback(psync_wolf_ctx, my_psk_client_tls13_cb);
 
     ////////////////////////////////////////////////////
     trace_init();
@@ -172,7 +172,7 @@ int main(int argc, char **argv) {
     trace("client tx/rx finished");
 
     WOLFSSL_CIPHER* cipher = wolfSSL_get_current_cipher(ssl);
-    WOLFSSL_SESSION* session   = wolfSSL_get_session(ssl);
+    WOLFSSL_SESSION* session = wolfSSL_get1_session(ssl);
 
     printf("SSL cipher suite            :%s\n", wolfSSL_CIPHER_get_name(cipher));
     printf("SSL version                 :%d\n", wolfSSL_GetVersion(ssl));
@@ -240,11 +240,12 @@ static int wait_sock_ready_for_ssl(int sock, int psync_ssl_errno){
 }
 ///////////////////////////////////////////////////////////////////////////////
 
-unsigned int my_psk_client_cb(WOLFSSL* ssl, const char* hint,
+unsigned int my_psk_client_tls13_cb(WOLFSSL* ssl, const char* hint,
         char* identity, unsigned int id_max_len, unsigned char* key,
-        unsigned int key_max_len)
+        unsigned int key_max_len, const char** ciphersuite)
 {
     static unsigned char cached_key[32];
+    *ciphersuite = "TLS13-AES128-GCM-SHA256";
     trace("entry hint:'%s' identity:'%s' id_max_len:%u key_max_len:%u", hint, identity, id_max_len, key_max_len);
     trace("identity: %02x %02x %02x %02x", identity[0], identity[1], identity[2], identity[3]);
 
